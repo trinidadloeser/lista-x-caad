@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>proyecto_CAA_final_final_ESTE_SI.pdf — No responde</title>
+<style>
+  :root{
+    --bg-app: #1e1e1e;
+    --bg-app-2: #252526;
+    --panel: #2d2d2d;
+    --border: #3f3f3f;
+    --text-dim: #9a9a9a;
+    --text: #e8e8e8;
+    --error-red: #ff5c4d;
+    --warn-yellow: #ffc857;
+    --accent: #5b8cff;
+    --accent-2: #7aa5ff;
+    --success: #3ddc97;
+
+    --paper: #f6f3ec;
+    --paper-2: #efeadf;
+    --ink: #1c1a16;
+    --ink-dim: #6b6557;
+    --line: #d8d1bf;
+    --brand: #cf4520;
+    --brand-2: #e8e0c8;
+  }
+
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{
+    margin:0; padding:0; width:100%; height:100%;
+    background: var(--bg-app);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* ============ FAKE SOFTWARE CHROME (background, looks frozen) ============ */
+  .fake-app{
+    position: fixed; inset:0;
+    background:
+      linear-gradient(180deg, var(--bg-app-2) 0%, var(--bg-app-2) 56px, var(--bg-app) 56px);
+    display:flex; flex-direction:column;
+    filter: saturate(0.85);
+  }
+  .fake-topbar{
+    height:56px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .fake-topbar .filename{
+    font-size: 12.5px; color: var(--text-dim);
+    white-space: nowrap; overflow:hidden; text-overflow: ellipsis;
+    max-width: 62%;
+    display:flex; align-items:center; gap:7px;
+  }
+  .fake-topbar .filename .dot{
+    width:7px; height:7px; border-radius:50%; background: var(--error-red);
+    flex-shrink:0;
+  }
+  .fake-topbar .tools{ display:flex; gap:10px; }
+  .fake-topbar .tools span{
+    width: 22px; height:22px; border-radius:5px;
+    background: var(--panel); display:inline-block;
+  }
+
+  .fake-canvas{
+    flex:1; position:relative;
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 28px),
+      var(--bg-app);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .fake-shape{
+    width: 58%; max-width: 320px; aspect-ratio: 4/5;
+    background: linear-gradient(155deg, #3a3a3c, #232325);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .fake-bottombar{
+    height: 38px; flex-shrink:0;
+    border-top: 1px solid var(--border);
+    display:flex; align-items:center; padding: 0 14px;
+    gap: 8px;
+  }
+  .fake-bottombar span{
+    font-size: 11px; color: var(--text-dim);
+  }
+
+  /* spinner / loading state shown for 1.5s before crash */
+  .boot-overlay{
+    position: fixed; inset:0; z-index: 50;
+    display:flex; align-items:center; justify-content:center;
+    flex-direction: column; gap: 18px;
+    background: rgba(20,20,20,0.0);
+    pointer-events: none;
+  }
+  .spinner{
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: var(--text-dim);
+    animation: spin 0.85s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+  .boot-overlay .boot-label{
+    font-size: 12px; color: var(--text-dim); letter-spacing: 0.02em;
+  }
+  body.frozen, body.frozen *{
+    cursor: wait !important;
+  }
+
+  /* ============ ERROR MODAL ============ */
+  .scrim{
+    position: fixed; inset:0; z-index: 100;
+    background: rgba(10,10,10,0.55);
+    backdrop-filter: blur(2px);
+    display:flex; align-items:center; justify-content:center;
+    padding: 22px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+  }
+  .scrim.visible{ opacity:1; pointer-events:auto; }
+
+  .modal{
+    width: 100%; max-width: 360px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 30px 70px rgba(0,0,0,0.55);
+    padding: 22px 20px 18px;
+    transform: translateY(14px) scale(0.97);
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(.2,.9,.3,1.2), opacity 0.35s ease;
+  }
+  .scrim.visible .modal{ transform: translateY(0) scale(1); opacity:1; }
+
+  .modal.shake{
+    animation: shake 0.45s cubic-bezier(.36,.07,.19,.97);
+  }
+  @keyframes shake{
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(3px); }
+    30%, 50%, 70% { transform: translateX(-6px); }
+    40%, 60% { transform: translateX(6px); }
+  }
+
+  .modal-head{
+    display:flex; align-items:flex-start; gap:10px;
+    margin-bottom: 12px;
+  }
+  .modal-head .icon{
+    font-size: 21px; line-height: 1; flex-shrink:0; margin-top: 1px;
+  }
+  .modal-head h2{
+    margin:0; font-size: 15.5px; font-weight: 700; color: var(--text);
+    letter-spacing: -0.01em;
+  }
+
+  .modal-body{
+    font-size: 13.5px; line-height: 1.55; color: #c8c8c8;
+    margin: 0 0 18px;
+  }
+  .modal-body .fname{
+    color: var(--warn-yellow); font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 12.5px; word-break: break-all;
+  }
+
+  .modal-progress{
+    height: 4px; border-radius: 3px; background: #1a1a1a;
+    overflow:hidden; margin-bottom: 18px;
+  }
+  .modal-progress .bar{
+    height:100%; width: 38%;
+    background: linear-gradient(90deg, var(--error-red), var(--warn-yellow));
+    border-radius: 3px;
+    animation: stuck 1.8s ease-in-out infinite;
+  }
+  @keyframes stuck{
+    0%, 100%{ width: 34%; }
+    50%{ width: 41%; }
+  }
+
+  .modal-actions{
+    display:flex; gap:10px; justify-content: flex-end;
+  }
+  .btn{
+    border:none; cursor:pointer;
+    font-family: inherit; font-weight: 600;
+    border-radius: 9px;
+    padding: 11px 16px;
+    font-size: 13.5px;
+    transition: transform 0.12s ease, opacity 0.12s ease, filter 0.12s ease;
+  }
+  .btn:active{ transform: scale(0.96); }
+  .btn-secondary{
+    background: transparent; color: var(--text-dim);
+  }
+  .btn-secondary:hover{ color: var(--text); }
+  .btn-primary{
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(91,140,255,0.35);
+    flex: 1;
+  }
+  .btn-primary:hover{ filter: brightness(1.08); }
+
+  /* success flash */
+  .success-flash{
+    position: fixed; inset:0; z-index: 95;
+    background: var(--success);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .success-flash.go{
+    animation: flash 0.55s ease forwards;
+  }
+  @keyframes flash{
+    0%{ opacity:0; }
+    35%{ opacity: 0.9; }
+    100%{ opacity:0; }
+  }
+
+  /* ============ FINAL LANDING PAGE (Lista X) ============ */
+  .landing{
+    position: fixed; inset:0; z-index: 30;
+    background: var(--paper);
+    color: var(--ink);
+    overflow-y: auto;
+    opacity: 0;
+    transform: scale(1.02);
+    pointer-events: none;
+    transition: opacity 0.6s ease, transform 0.6s cubic-bezier(.2,.8,.2,1);
+  }
+  .landing.revealed{
+    opacity: 1; transform: scale(1);
+    pointer-events: auto;
+  }
+
+  .landing-inner{
+    min-height: 100%;
+    display:flex; flex-direction: column;
+    padding: 56px 24px 40px;
+  }
+
+  .restored-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    align-self: flex-start;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--success);
+    background: rgba(61,220,151,0.12);
+    border: 1px solid rgba(61,220,151,0.35);
+    padding: 5px 10px; border-radius: 100px;
+    margin-bottom: 26px;
+  }
+  .restored-tag .pulse{
+    width:6px; height:6px; border-radius:50%; background: var(--success);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%, 100%{ opacity:1; transform: scale(1); }
+    50%{ opacity:0.4; transform: scale(0.7); }
+  }
+
+  .eyebrow{
+    font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--brand); font-weight: 700;
+    margin: 0 0 10px;
+  }
+
+  h1.headline{
+    font-family: 'Inter', sans-serif;
+    font-size: clamp(30px, 9vw, 40px);
+    line-height: 1.06;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    color: var(--ink);
+  }
+  h1.headline em{
+    font-style: normal;
+    color: var(--brand);
+  }
+
+  .sub{
+    font-size: 15px; line-height: 1.55; color: var(--ink-dim);
+    max-width: 38ch;
+    margin: 0 0 36px;
+  }
+
+  .proposals{
+    list-style: none; margin: 0 0 40px; padding: 0;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .proposals li{
+    display:flex; gap: 14px; align-items: flex-start;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px 16px;
+  }
+  .proposals .pic{
+    font-size: 22px; line-height: 1;
+    flex-shrink:0;
+    width: 40px; height: 40px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .proposals .ptext strong{
+    display:block; font-size: 13.5px; font-weight: 700;
+    margin-bottom: 3px; color: var(--ink);
+  }
+  .proposals .ptext span{
+    font-size: 13px; line-height: 1.5; color: var(--ink-dim);
+  }
+
+  .closer{
+    margin-top: auto;
+    border-top: 1px solid var(--line);
+    padding-top: 22px;
+    text-align: center;
+  }
+  .closer .dates{
+    font-size: 12.5px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--brand);
+    margin: 0 0 4px;
+  }
+  .closer .tagline{
+    font-size: 19px; font-weight: 800; color: var(--ink);
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  .closer .candidate{
+    margin-top: 14px;
+    font-size: 12px; color: var(--ink-dim);
+  }
+  .closer .candidate b{ color: var(--ink); }
+
+  @media (min-width: 480px){
+    .landing-inner{ padding: 64px 40px 48px; max-width: 480px; margin: 0 auto; }
+  }
+</style>
+</head>
+<body class="frozen">
+
+  <!-- ============ INTERFAZ DE FONDO QUE SIMULA EL SOFTWARE DE DISEÑO ============ -->
+  <div class="fake-app" aria-hidden="true">
+    <div class="fake-topbar">
+      <div class="filename"><span class="dot"></span>proyecto_CAA_final_final_ESTE_SI.pdf</div>
+      <div class="tools"><span></span><span></span><span></span></div>
+    </div>
+    <div class="fake-canvas">
+      <div class="fake-shape"></div>
+    </div>
+    <div class="fake-bottombar">
+      <span>100%</span><span>·</span><span>Guardado hace 4 min</span>
+    </div>
+  </div>
+
+  <!-- breve animación de "congelado" antes del error -->
+  <div class="boot-overlay" id="bootOverlay">
+    <div class="spinner"></div>
+    <div class="boot-label">La aplicación no responde…</div>
+  </div>
+
+  <!-- ============ POP-UP DE ERROR ============ -->
+  <div class="scrim" id="scrim">
+    <div class="modal" id="modal" role="alertdialog" aria-labelledby="modalTitle" aria-describedby="modalDesc">
+      <div class="modal-head">
+        <span class="icon">⚠️</span>
+        <h2 id="modalTitle">Error crítico del sistema</h2>
+      </div>
+      <p class="modal-body" id="modalDesc">
+        El archivo <span class="fname">"proyecto_CAA_final_final_ESTE_SI.pdf"</span> ha dejado de responder inesperadamente debido a una gestión anterior corrupta.
+        <br><br>
+        ¿Desea restaurar el Centro de Alumnos con una versión estable?
+      </p>
+      <div class="modal-progress"><div class="bar"></div></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cancelBtn" type="button">Cancelar</button>
+        <button class="btn btn-primary" id="restoreBtn" type="button">Restaurar con Lista X</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- destello de éxito al restaurar -->
+  <div class="success-flash" id="successFlash" aria-hidden="true"></div>
+
+  <!-- ============ LANDING PAGE REAL: LISTA X ============ -->
+  <main class="landing" id="landing">
+    <div class="landing-inner">
+      <div class="restored-tag"><span class="pulse"></span> Versión estable restaurada</div>
+
+      <p class="eyebrow">Lista X · Centro de Alumnos</p>
+      <h1 class="headline">Sofía Vásquez<br><em>Presidenta 2027</em></h1>
+      <p class="sub">Tu gestión no debería sentirse como un software pegado. Una propuesta construida desde el taller, para que todo funcione como corresponde.</p>
+
+      <ul class="proposals">
+        <li>
+          <span class="pic">🛠️</span>
+          <span class="ptext">
+            <strong>Flexibilidad y mediación</strong>
+            <span>Protocolos de corrección respetuosos y semanas de receso reales.</span>
+          </span>
+        </li>
+        <li>
+          <span class="pic">🚀</span>
+          <span class="ptext">
+            <strong>Capacidad de gestión</strong>
+            <span>Soluciones ejecutivas y reales desde el taller, cero promesas vacías.</span>
+          </span>
+        </li>
+        <li>
+          <span class="pic">☕</span>
+          <span class="ptext">
+            <strong>Espacios de bienestar</strong>
+            <span>Zonas de descanso, distensión y salud mental dentro de la UDD.</span>
+          </span>
+        </li>
+      </ul>
+
+      <div class="closer">
+        <p class="dates">Vota del 1 al 15 de octubre</p>
+        <p class="tagline">Tu versión estable.</p>
+        <p class="candidate">Lista X — <b>Sofía Vásquez</b>, candidata a presidenta del Centro de Alumnos de Diseño</p>
+      </div>
+    </div>
+  </main>
+
+<script>
+(function(){
+  'use strict';
+
+  var body = document.body;
+  var bootOverlay = document.getElementById('bootOverlay');
+  var scrim = document.getElementById('scrim');
+  var modal = document.getElementById('modal');
+  var cancelBtn = document.getElementById('cancelBtn');
+  var restoreBtn = document.getElementById('restoreBtn');
+  var successFlash = document.getElementById('successFlash');
+  var landing = document.getElementById('landing');
+
+  // 1. Simula congelamiento del sistema por 1.5s, luego muestra el error
+  window.addEventListener('load', function(){
+    setTimeout(function(){
+      body.classList.remove('frozen');
+      bootOverlay.style.display = 'none';
+      scrim.classList.add('visible');
+    }, 1500);
+  });
+
+  // 2. "Cancelar" no funciona: el modal tiembla y obliga a elegir la otra opción
+  cancelBtn.addEventListener('click', function(){
+    modal.classList.remove('shake');
+    // forzar reflow para poder re-disparar la animación
+    void modal.offsetWidth;
+    modal.classList.add('shake');
+  });
+  modal.addEventListener('animationend', function(e){
+    if(e.animationName === 'shake'){
+      modal.classList.remove('shake');
+    }
+  });
+
+  // 3. "Restaurar con Lista X": éxito y transición a la landing real
+  restoreBtn.addEventListener('click', function(){
+    restoreBtn.disabled = true;
+    cancelBtn.disabled = true;
+
+    // cierra el modal de error
+    scrim.classList.remove('visible');
+
+    // destello verde de "reparado"
+    successFlash.classList.add('go');
+
+    // revela la landing real
+    setTimeout(function(){
+      landing.classList.add('revealed');
+    }, 220);
+  });
+})();
+</script>
+
+</body>
+</html>
